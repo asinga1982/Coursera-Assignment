@@ -1,0 +1,51 @@
+---
+title: "Tooth Growth Data Analysis"
+author: "Aanish Singla"
+date: "1 April 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Overview**: In this document we will analyze the ToothGrowth dataset that comes with R "datasets" and do hypothesis testing for facts which are not obvious.
+
+Lets see variables and the values:
+```{r}
+library("datasets")
+str(ToothGrowth)
+```
+
+There are 3 variables - len, supp and dose. Supp (Delivery Method) is a 2 level factor with value "VC" and "OJ". Other 2 fields are numeric.
+
+Also we can see that there are 60 rows in the dataset.
+
+Lets see how the plot looks for length and dose for different supp
+
+```{r fig.width=4, fig.height=3}
+library(ggplot2)
+g <- ggplot(ToothGrowth, aes(dose, len))
+g + geom_point(aes(color=supp), size=2) + 
+  xlab("Dose") + ylab("Length") + ggtitle("Tooth Growth Data")
+```
+
+There is a clear increase in length as the Dose increases.   
+
+
+**What about the effect of supp(delivery method) on length?**
+
+Lets frame a hypothesis for this. 
+Null Hypothesis: H0 = Delivery method has no effect on length i.e.
+                 H0 = Mean length with OJ = Mean  length with VC
+                 
+Alternate Hypothesis = Ha = Delivery method has an effect on length i.e.                   Ha = Mean length with OJ <> Mean  length with VC
+
+Lets perform a two sided non-paired T-test to verify the Hypothesis (assuming variances are not equal)    
+
+```{r}
+t.test(ToothGrowth$len~ToothGrowth$supp, paired=F, 
+       var.equal=F, alt="two.sided")
+```
+
+**Since the p-value is 0.06063 (greater than 0.05), we fail to reject the Null hypothesis. Also we can notice that that 95% confidence interval contains zero in it, so we have no statistical evidence that one delivery method is better than other.**
