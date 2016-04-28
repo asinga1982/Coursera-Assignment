@@ -1,0 +1,114 @@
+---
+title: "Automatic Vs Maunal Transmission Analysis"
+author: "Aanish Singla"
+date: "25 April 2016"
+output: pdf_document
+---
+**Aim**: To find out from mtcars dataset - 
+1. Is an automatic or manual transmission better for MPG?
+2. Quantify the MPG difference between automatic and manual transmissions
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## mtcars Dataset 
+Let see what all does mtcars dataset contains
+```{r }
+str(mtcars)
+```
+
+Let see how am relates to miles per gallon(mpg).
+```{r fig.width=4, fig.height=3}
+boxplot(mtcars$mpg~factor(mtcars$am), main="Transmission Vs Miles per gallon", 
+        xlab="Transmission 0-Automatic 1-Manual",
+        ylab="mpg")
+```
+The plot shows manual transmission has appx. 5 mpg higher mileage than automatic. Lets dig deeper with linear models.
+
+Model 1:
+```{r }
+fit1 <- lm(mpg~factor(am), mtcars)
+fit1$coefficients
+```
+This shows that mpg increases more rapidly for manual transmission than for automatic.
+
+Model 2: Including Cyl
+```{r }
+fit2 <- lm(mpg~factor(am)+factor(cyl), mtcars)
+fit2$coefficients
+```
+
+Model 3: Including Gross Horse Power
+```{r }
+fit3 <- lm(mpg~factor(am)+factor(cyl)+hp, mtcars)
+fit3$coefficients
+```
+**Comparison :** Lets compare the models generated till now:
+```{r }
+anova(fit1,fit2,fit3)
+```
+**Result:** Each model seem to improve the F-value and has a small p-value indicating that the included variable is useful. Lets continue to add further variables and analyze.
+
+Model 4: Including disp
+```{r }
+fit4<- lm(mpg~factor(am)+factor(cyl)+hp+disp, mtcars)
+fit4$coefficients
+```
+
+Model 5: Including drat
+```{r } 
+fit5<- lm(mpg~factor(am)+factor(cyl)+hp+disp+drat, mtcars)
+fit5$coefficients
+```
+
+**Comparison :** Lets compare the models 
+```{r }
+anova(fit3,fit4,fit5)
+```
+**Result:** Both Model 4 and 5 have large p-value and small F-value, indicating that the variables don't add value to our model. Hence we drop disp and drat.
+
+Model 6: Including wt
+```{r }
+fit6<- lm(mpg~factor(am)+factor(cyl)+hp+wt, mtcars)
+fit6$coefficients
+```
+
+Model 7: Including qsec
+```{r }
+fit7<- lm(mpg~factor(am)+factor(cyl)+hp+wt+qsec, mtcars)
+fit7$coefficients
+```
+**Comparison :** Lets compare the models 
+```{r }
+anova(fit3,fit6,fit7)
+```
+**Result:** wt has improved the model but not qsec.
+
+Continuing with rest of the variable in the same way, we find that Gross horsepower, Weight, No. of cylinders and Transmission are useful variables for the model.
+
+```{r }
+summary(lm(mpg~factor(am)+wt+hp+factor(cyl), mtcars))
+```
+Adjusted R-square is 0.98. Our model seems to be really good!
+
+**Really?**
+Lets see if Transmission is really adding value.
+```{r }
+f1 <- lm(mpg~wt+hp+factor(cyl), mtcars)
+f2 <- lm(mpg~wt+hp+factor(cyl)+factor(am), mtcars)
+anova(f1,f2)
+```
+**No its not. Transmission was significant earlier but not with Gross horsepower, Weight, No. of cylinders included.**
+
+Lets see the residual plot for f1.
+```{r fig.width=4, fig.height=3}
+plot(f1$fitted.values, f1$residuals,
+     main="Residual plot for Model(MPG~hp+wt+cyl)")
+abline(h=0)
+```
+
+Values are random hence the model seems to be good!
+
+
+**Executive Summary: Given 32 sets of observations for different cars doesn't really show that one type of transmission is better than the other. Though at an initial glance, manual transission appears better than automated but when analyzed taking into account other important variables, the trend is not conclusive.**
