@@ -1,0 +1,122 @@
+---
+title: "Assignment Predictive Analysis"
+author: "Aanish Singla"
+date: "21 May 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(randomForest)
+library(corrplot)
+library(MASS)
+library(rpart)
+```
+
+## Problem Description:
+The goal of this project is to detect mistakes in weight-lifting exercises by using activity recognition techniques. Experiment included recorded users performing the same activity correctly (calsse=A) and with a set of common mistakes (classe=B,C,D and E) with wearable sensors. Participants were asked to perform one set of 10 repetitions
+of the Unilateral Dumbbell Biceps Curl in five different fashions:
+exactly according to the specification (Class A), throwing
+the elbows to the front (Class B), lifting the dumbbell
+only halfway (Class C), lowering the dumbbell only halfway
+(Class D) and throwing the hips to the front (Class E).
+
+The variable to be predicted is "classe" variable in the training set. Measurements taken by sensors are used to predict if the exercise was done correctly or not. 
+
+Data used in this analysis is from "Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013." paper.
+
+Read more: http://groupware.les.inf.puc-rio.br/har#ixzz49DkwG8S9.
+
+## Data Analysis:
+Lets load the training dataset and have a look at it.
+```{r }
+getwd()
+train <- read.csv("pml-training.csv", header=T, na.strings = c("", "NA", "#DIV/0!"), sep=",")
+dim(train)
+```
+
+Its a huge dataset.
+Lets look if there are any missing vales/NAs in the data:
+
+```{r }
+sum(colSums(is.na(train)))
+```
+There are a lot of missing values. 
+Lets remove the missing values.
+
+```{r }
+train <- train[, colSums(is.na(train)) == 0]
+```
+
+Lets also remove the initial columns which don't have useful data.
+```{r }
+dim(train)
+train <- train[,-c(1:7)]
+dim(train)
+```
+We are not left with 53 variable out of which classe is the variable that we want to predict. 
+
+52 is still a big number. Lets see if there are some variables which are highly correlated. 
+
+```{r fig.width=8, fig.height=8}
+corr <- cor(train[,-53])
+corrplot(corr, type="upper", method="color", tl.cex = 0.75, tl.srt = 45, tl.col="black")
+```
+
+Dark colors mean high correlation. We can see from the above plot that there are lot of correlated variables. Lets remove the ones which have correlation above 0.6.
+
+```{r }
+select_idx <- findCorrelation(corr, cutoff = 0.6)
+length(select_idx)
+```
+We now have 27 variables.
+
+## Model Selection:
+Before building the model, lets build training and cross validations sets with 75% of data in training and 25% in cross validation.
+
+```{r }
+idx <- createDataPartition(train$class, p=0.75, list=FALSE)
+
+training <- train[idx,]
+cv <- train[-idx,] 
+```
+
+## Tree Based Model: 
+Lets start with a tree based model to predict classe variable.
+```{r }
+set.seed(115)
+modtree <- train(classe~., method="rpart", data=training[,c(select_idx,53)])
+modtree                                                   
+```
+
+The accuracy is less than 50%, so this doesn't seem to a good model.
+
+## LDA Model: 
+Since this is a classification problem, we can try Linear Discriminant Analysis:
+```{r }
+modlda <- train(classe~., method="lda", data=training[,c(select_idx,53)])
+modlda                                                   
+```
+
+The accuracy is about 58%, but still not great. 
+
+## Randon Forest: 
+Lets try Random Forest
+```{r }
+modrf <- randomForest(classe~., data=training[,c(select_idx,53)])
+modrf                                                   
+```
+
+The accuracy is about 89%, this is really good.
+
+## Estimating Out of sample Error: 
+Lets use the cross validatoion set to to estimate the out of sample error using random forest.
+
+```{r }
+pred <- predict(modrf, cv[,c(select_idx,53)])
+confusionMatrix(cv$classe, pred)
+```
+Estimated Out of sample error is: 98% with p-value less than 0.05, indicating that this is not happening randomly.
+
+##Conclusion: We were successfully able to detect mistakes in weight-lifting exercises by using activity recognition techniques with random forest model with an estimated error rate of less than 1.5 witjh 95% confidence.
